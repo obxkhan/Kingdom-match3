@@ -1,0 +1,145 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private Google account profile for an authenticated TileTown player.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the player.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified Google account email.",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Player display name from Google profile.",
+          "maxLength": 120
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Google avatar URL.",
+          "maxLength": 512
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was last updated."
+        }
+      },
+      "required": ["uid", "email", "displayName", "photoURL", "createdAt", "updatedAt"]
+    },
+    "CitySaveState": {
+      "title": "CitySaveState",
+      "description": "Persistent cloud save containing city plots, resources, Match-3 board, and stats.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the save owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "timber": {
+          "type": "integer",
+          "description": "Current Timber resource count."
+        },
+        "brick": {
+          "type": "integer",
+          "description": "Current Brick resource count."
+        },
+        "gold": {
+          "type": "integer",
+          "description": "Current Gold resource count."
+        },
+        "power": {
+          "type": "integer",
+          "description": "Current Power resource count."
+        },
+        "civicPop": {
+          "type": "integer",
+          "description": "Bonus citizen population earned from Match-3 civic matches."
+        },
+        "turnsPlayed": {
+          "type": "integer",
+          "description": "Total turns played in the current city."
+        },
+        "bestPopulation": {
+          "type": "integer",
+          "description": "All-time highest population achieved across sessions."
+        },
+        "prestigeLevel": {
+          "type": "integer",
+          "description": "Permanent Prestige tier earned by ascending a qualifying city."
+        },
+        "activePage": {
+          "type": "string",
+          "enum": ["city", "harvest"],
+          "description": "Last viewed workspace tab.",
+          "maxLength": 16
+        },
+        "lots": {
+          "type": "array",
+          "description": "Fixed 225-element array representing the 15x15 city plots."
+        },
+        "boardCells": {
+          "type": "array",
+          "description": "Fixed 225-element flattened array representing the 15x15 Match-3 tiles."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the cloud save was first created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest cloud save."
+        }
+      },
+      "required": [
+        "ownerId",
+        "timber",
+        "brick",
+        "gold",
+        "power",
+        "civicPop",
+        "turnsPlayed",
+        "bestPopulation",
+        "prestigeLevel",
+        "activePage",
+        "lots",
+        "boardCells",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores private Google account profile metadata owned strictly by userId."
+    },
+    "/users/{userId}/gameState/{saveId}": {
+      "schema": {
+        "$ref": "#/entities/CitySaveState"
+      },
+      "description": "Stores persistent city and Match-3 cloud save documents owned strictly by userId."
+    }
+  }
+}

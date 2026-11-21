@@ -1,0 +1,6 @@
+{
+  "name": "ClearChat",
+  "description": "A fast, clean conversational chatbot.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

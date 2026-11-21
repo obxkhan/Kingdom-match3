@@ -1,0 +1,237 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string &&
+        id.size() >= 1 &&
+        id.size() <= 128 &&
+        id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && isEmailVerified() && request.auth.uid == userId;
+    }
+
+    function userExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isNonNegInt(val, maxVal) {
+      return val is int && val >= 0 && val <= maxVal;
+    }
+
+    function isValidUserProfileFields() {
+      return incoming().uid is string &&
+        isValidId(incoming().uid) &&
+        incoming().uid == request.auth.uid &&
+        incoming().email is string &&
+        incoming().email.size() > 0 &&
+        incoming().email.size() <= 256 &&
+        incoming().displayName is string &&
+        incoming().displayName.size() <= 120 &&
+        incoming().photoURL is string &&
+        incoming().photoURL.size() <= 512 &&
+        incoming().updatedAt is timestamp &&
+        incoming().updatedAt == request.time;
+    }
+
+    function isValidCitySaveFields() {
+      return incoming().ownerId is string &&
+        isValidId(incoming().ownerId) &&
+        incoming().ownerId == request.auth.uid &&
+        isNonNegInt(incoming().timber, 10000000) &&
+        isNonNegInt(incoming().brick, 10000000) &&
+        isNonNegInt(incoming().gold, 10000000) &&
+        isNonNegInt(incoming().power, 10000000) &&
+        isNonNegInt(incoming().civicPop, 10000000) &&
+        isNonNegInt(incoming().turnsPlayed, 10000000) &&
+        isNonNegInt(incoming().bestPopulation, 100000000) &&
+        isNonNegInt(incoming().prestigeLevel, 1000) &&
+        incoming().activePage is string &&
+        incoming().activePage in ['city', 'harvest'] &&
+        incoming().lots is list &&
+        incoming().lots.size() == 225 &&
+        incoming().lots[0] is map &&
+        incoming().boardCells is list &&
+        incoming().boardCells.size() == 225 &&
+        incoming().boardCells[0] is map &&
+        incoming().updatedAt is timestamp &&
+        incoming().updatedAt == request.time;
+    }
+
+    // ===============================================================
+    // Default Deny Everything
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Collection: /users/{userId}
+    // ===============================================================
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+        isValidId(userId) &&
+        hasRequiredFields(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'updatedAt']) &&
+        hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'updatedAt']) &&
+        incoming().uid == userId &&
+        incoming().createdAt is timestamp &&
+        incoming().createdAt == request.time &&
+        isValidUserProfileFields();
+
+      allow update: if isOwner(userId) &&
+        isValidId(userId) &&
+        hasRequiredFields(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'updatedAt']) &&
+        hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'updatedAt']) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'email',
+          'displayName',
+          'photoURL',
+          'updatedAt'
+        ]) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        isValidUserProfileFields();
+
+      allow delete: if false;
+
+      // =============================================================
+      // Subcollection: /users/{userId}/gameState/{saveId}
+      // =============================================================
+      match /gameState/{saveId} {
+        allow get: if isOwner(userId) &&
+          isValidId(saveId) &&
+          saveId == 'primary' &&
+          userExists(userId);
+        allow list: if false;
+
+        allow create: if isOwner(userId) &&
+          isValidId(saveId) &&
+          saveId == 'primary' &&
+          userExists(userId) &&
+          hasRequiredFields([
+            'ownerId',
+            'timber',
+            'brick',
+            'gold',
+            'power',
+            'civicPop',
+            'turnsPlayed',
+            'bestPopulation',
+            'prestigeLevel',
+            'activePage',
+            'lots',
+            'boardCells',
+            'createdAt',
+            'updatedAt'
+          ]) &&
+          hasOnlyAllowedFields([
+            'ownerId',
+            'timber',
+            'brick',
+            'gold',
+            'power',
+            'civicPop',
+            'turnsPlayed',
+            'bestPopulation',
+            'prestigeLevel',
+            'activePage',
+            'lots',
+            'boardCells',
+            'createdAt',
+            'updatedAt'
+          ]) &&
+          incoming().createdAt is timestamp &&
+          incoming().createdAt == request.time &&
+          isValidCitySaveFields();
+
+        allow update: if isOwner(userId) &&
+          isValidId(saveId) &&
+          saveId == 'primary' &&
+          userExists(userId) &&
+          hasRequiredFields([
+            'ownerId',
+            'timber',
+            'brick',
+            'gold',
+            'power',
+            'civicPop',
+            'turnsPlayed',
+            'bestPopulation',
+            'prestigeLevel',
+            'activePage',
+            'lots',
+            'boardCells',
+            'createdAt',
+            'updatedAt'
+          ]) &&
+          hasOnlyAllowedFields([
+            'ownerId',
+            'timber',
+            'brick',
+            'gold',
+            'power',
+            'civicPop',
+            'turnsPlayed',
+            'bestPopulation',
+            'prestigeLevel',
+            'activePage',
+            'lots',
+            'boardCells',
+            'createdAt',
+            'updatedAt'
+          ]) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'timber',
+            'brick',
+            'gold',
+            'power',
+            'civicPop',
+            'turnsPlayed',
+            'bestPopulation',
+            'prestigeLevel',
+            'activePage',
+            'lots',
+            'boardCells',
+            'updatedAt'
+          ]) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().createdAt == existing().createdAt &&
+          isValidCitySaveFields();
+
+        allow delete: if false;
+      }
+    }
+  }
+}
